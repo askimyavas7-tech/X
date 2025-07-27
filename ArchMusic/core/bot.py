@@ -4,16 +4,14 @@ from pyrogram.enums import ChatMemberStatus
 from pyrogram.types import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeAllGroupChats
 
 import config
-from ..logging import LOGGER  # Proje içi özel logger modülü
+from ..logging import LOGGER
 
 
-# 🌐 Özel sohbetlerde çalışacak komutlar
 PRIVATE_COMMANDS = [
     BotCommand("start", "🌟 Botu başlat ve müzik keyfine başla"),
     BotCommand("yardim", "🧠 Yardım menüsünü göster"),
 ]
 
-# 💬 Gruplarda çalışacak komutlar
 GROUP_COMMANDS = [
     BotCommand("oynat", "🎶 Seçilen şarkıyı çalmaya başlar"),
     BotCommand("voynat", "🎬 Video oynatımını başlatır"),
@@ -35,12 +33,10 @@ GROUP_COMMANDS = [
 
 
 async def set_bot_commands(client: Client):
-    """Telegram'a bot komutlarını yükler."""
     await client.set_bot_commands(PRIVATE_COMMANDS, scope=BotCommandScopeAllPrivateChats())
     await client.set_bot_commands(GROUP_COMMANDS, scope=BotCommandScopeAllGroupChats())
 
 
-# 🎧 Ana bot sınıfı
 class ArchMusic(Client):
     def __init__(self):
         self.logger = LOGGER(__name__)
@@ -69,21 +65,18 @@ class ArchMusic(Client):
             sys.exit()
 
     async def _load_bot_info(self):
-        """Botun kendi bilgilerini alır."""
         me = await self.get_me()
         self.username = me.username
         self.id = me.id
         self.name = f"{me.first_name} {me.last_name}" if me.last_name else me.first_name
 
     async def _check_logger_group_admin(self):
-        """Log grubunda yönetici yetkisi kontrolü yapar."""
         member = await self.get_chat_member(config.LOG_GROUP_ID, self.id)
         if member.status != ChatMemberStatus.ADMINISTRATOR:
             self.logger.error("⚠️ Lütfen log grubunda botu yönetici yapın.")
             sys.exit()
 
     async def _send_startup_notice(self):
-        """Log grubuna botun aktif olduğunu bildirir (video olmadan)."""
         try:
             await self.send_message(
                 chat_id=config.LOG_GROUP_ID,
@@ -94,9 +87,8 @@ class ArchMusic(Client):
                     "✨ Keyifli dinlemeler!"
                 ),
             )
-        except Exception as e:
+        except Exception:
             self.logger.error(
-                f"🚫 Log grubuna mesaj gönderilemedi: {e}\n"
-                f"Botu gruba ekleyip yönetici yaptığınızdan emin olun."
+                "🚫 Log grubuna mesaj gönderilemedi. Botu gruba eklediğinizden ve yönetici yaptığınızdan emin olun."
             )
             sys.exit()

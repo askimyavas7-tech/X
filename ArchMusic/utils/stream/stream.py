@@ -117,14 +117,19 @@ async def stream(
                 img = None
                 button = stream_markup(_, vidid, chat_id)
                 run = await app.send_message(
-                original_chat_id,
-                text=_["stream_1"].format(
-                    title,
-                    f"https://t.me/{app.username}?start=info_{vidid}",
-                    duration_min,
-                    user_name
-                ),
-                )
+    original_chat_id,
+    text=_["stream_1"].format(
+        title,
+        f"https://t.me/{app.username}?start=info_{vidid}",
+        duration_min,
+        user_name,
+        user_id
+    ),
+    reply_markup=button,
+    parse_mode="HTML",  # Bunu mutlaka ekle
+    disable_web_page_preview=True
+)
+
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "stream"
         if count == 0:
@@ -197,14 +202,19 @@ async def stream(
             img = None
             button = stream_markup(_, vidid, chat_id)
             run = await app.send_message(
-                original_chat_id,
-                text=_["stream_1"].format(
-                    title,
-                    f"https://t.me/{app.username}?start=info_{vidid}",
-                    duration_min,
-                    user_name
-                ),
-            )
+    original_chat_id,
+    text=_["stream_1"].format(
+        title,
+        f"https://t.me/{app.username}?start=info_{vidid}",
+        duration_min,
+        user_name,
+        user_id
+    ),
+    reply_markup=button,
+    parse_mode="HTML",  # Bunu mutlaka ekle
+    disable_web_page_preview=True
+)
+
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "stream"
     elif streamtype == "soundcloud":
@@ -360,15 +370,19 @@ async def stream(
             img = None
             button = telegram_markup(_, chat_id)
             run = await app.send_message(
-                original_chat_id,
-                text=_["stream_1"].format(
-                    title,
-                    f"https://t.me/{app.username}?start=info_{vidid}",
-                    duration_min,
-                    user_name
-                ),
-                
-            )
+    original_chat_id,
+    text=_["stream_1"].format(
+        title,
+        f"https://t.me/{app.username}?start=info_{vidid}",
+        duration_min,
+        user_name,
+        user_id
+    ),
+    reply_markup=button,
+    parse_mode="HTML",  # Bunu mutlaka ekle
+    disable_web_page_preview=True
+)
+
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
     elif streamtype == "index":
@@ -414,16 +428,18 @@ async def stream(
             )
             button = telegram_markup(_, chat_id)
             run = await app.send_message(
-                original_chat_id,
-                text=_["stream_2"].format(
-                    title,
-                    f"https://t.me/{app.username}?start=info_{vidid}",
-                    duration_min,
-                    user_name
-                ),
-                
-            )
-                
+    original_chat_id,
+    text=_["stream_1"].format(
+        title,
+        f"https://t.me/{app.username}?start=info_{vidid}",
+        duration_min,
+        user_name,
+        user_id
+    ),
+    reply_markup=button,
+    parse_mode="HTML",  # Bunu mutlaka ekle
+    disable_web_page_preview=True
+)       
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
             await mystic.delete()

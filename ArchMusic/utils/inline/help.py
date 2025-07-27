@@ -1,3 +1,5 @@
+from ArchMusic.utils.help import help_panel
+
 from typing import Union, Dict
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 

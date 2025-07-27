@@ -1,19 +1,19 @@
 #
-# Copyright (C) 2021-2023 by ArchBots@Github, < https://github.com/ArchBots >
-#
+# Copyright (C) 2021-2023 by ArchBots@Github, < https://github.com/ArchBots >.
 # This file is part of < https://github.com/ArchBots/ArchMusic > project,
 # and is released under the "GNU v3.0 License Agreement".
 # Please see < https://github.com/ArchBots/ArchMusic/blob/master/LICENSE >
 #
-# All rights reserved.
-#
 
 import asyncio
+from datetime import datetime
+import pytz
+
 from pyrogram import filters
 from pyrogram.enums import ChatMembersFilter
 from pyrogram.types import CallbackQuery, Message
 
-from config import BANNED_USERS, MUSIC_BOT_NAME, adminlist, lyrical
+from config import BANNED_USERS, MUSIC_BOT_NAME, adminlist, lyrical, LOG_GROUP_ID
 from strings import get_command
 from ArchMusic import app
 from ArchMusic.core.call import ArchMusic
@@ -22,7 +22,6 @@ from ArchMusic.utils.database import get_authuser_names, get_cmode
 from ArchMusic.utils.decorators import ActualAdminCB, AdminActual, language
 from ArchMusic.utils.formatters import alpha_to_int
 
-# Komutlar
 RELOAD_COMMAND = get_command("RELOAD_COMMAND")
 RESTART_COMMAND = get_command("RESTART_COMMAND")
 
@@ -35,27 +34,35 @@ async def reload_admin_cache(client, message: Message, _):
         admins = app.get_chat_members(chat_id, filter=ChatMembersFilter.ADMINISTRATORS)
         authusers = await get_authuser_names(chat_id)
         adminlist[chat_id] = []
-        result_list = []
 
         async for user in admins:
             if user.privileges.can_manage_video_chats:
                 adminlist[chat_id].append(user.user.id)
-                result_list.append(f"{user.user.mention} [`{user.user.id}`]")
-
         for user in authusers:
             user_id = await alpha_to_int(user)
             adminlist[chat_id].append(user_id)
-            result_list.append(f"`{user}` [`{user_id}`]")
 
-        if not result_list:
-            await message.reply_text("Yönetici bulunamadı.")
-        else:
-            await message.reply_text(
-                "**Yönetici listesi güncellendi:**\n\n" + "\n".join(result_list)
+        await message.reply_text(_["admin_20"])
+
+        # Saat bilgisi (Europe/Istanbul)
+        turkey_time = datetime.now(pytz.timezone("Europe/Istanbul")).strftime('%Y-%m-%d %H:%M:%S')
+
+        # Log gruba bildirim gönder
+        try:
+            await app.send_message(
+                LOG_GROUP_ID,
+                f"♻️ <b>Admin Cache Yenilendi</b>\n"
+                f"🛠️ <b>Komut:</b> /{RELOAD_COMMAND[0]}\n"
+                f"🕒 <b>Zaman:</b> {turkey_time} (Europe/Istanbul)\n"
+                f"👤 <b>Kullanıcı:</b> {message.from_user.mention} [`{message.from_user.id}`]\n"
+                f"🗨️ <b>Sohbet:</b> {message.chat.title} [`{message.chat.id}`]"
             )
-    except Exception as e:
+        except:
+            pass
+
+    except:
         await message.reply_text(
-            "Yönetici önbelleği yeniden yüklenemedi. Sohbetinizde Bot'un yönetici olduğundan emin olun."
+            "Yönetici önbelleği yeniden yüklenemedi. Bot'un yönetici olduğundan emin olun."
         )
 
 
@@ -63,7 +70,7 @@ async def reload_admin_cache(client, message: Message, _):
 @AdminActual
 async def restartbot(client, message: Message, _):
     mystic = await message.reply_text(
-        f"Lütfen bekleyin... {MUSIC_BOT_NAME} sohbetiniz için yeniden başlatılıyor..."
+        f"Lütfen Bekleyin.. {MUSIC_BOT_NAME} sohbetiniz için yeniden başlatılıyor.."
     )
     await asyncio.sleep(1)
     try:
@@ -71,7 +78,6 @@ async def restartbot(client, message: Message, _):
         await ArchMusic.stop_stream(message.chat.id)
     except:
         pass
-
     chat_id = await get_cmode(message.chat.id)
     if chat_id:
         try:
@@ -83,8 +89,23 @@ async def restartbot(client, message: Message, _):
             await ArchMusic.stop_stream(chat_id)
         except:
             pass
+    await mystic.edit_text("Başarıyla yeniden başlatıldı. Şimdi oynamayı deneyin..")
 
-    return await mystic.edit_text("✅ Başarıyla yeniden başlatıldı. Şimdi oynatmayı deneyin.")
+    # Saat bilgisi (Europe/Istanbul)
+    turkey_time = datetime.now(pytz.timezone("Europe/Istanbul")).strftime('%Y-%m-%d %H:%M:%S')
+
+    # Log gruba bildirim gönder
+    try:
+        await app.send_message(
+            LOG_GROUP_ID,
+            f"🔄 <b>Bot Yeniden Başlatıldı</b>\n"
+            f"🛠️ <b>Komut:</b> /{RESTART_COMMAND[0]}\n"
+            f"🕒 <b>Zaman:</b> {turkey_time} (Europe/Istanbul)\n"
+            f"👤 <b>Kullanıcı:</b> {message.from_user.mention} [`{message.from_user.id}`]\n"
+            f"🗨️ <b>Sohbet:</b> {message.chat.title} [`{message.chat.id}`]"
+        )
+    except:
+        pass
 
 
 @app.on_callback_query(filters.regex("close") & ~BANNED_USERS)
@@ -103,14 +124,18 @@ async def stop_download(client, CallbackQuery: CallbackQuery, _):
     task = lyrical.get(message_id)
     if not task:
         return await CallbackQuery.answer("İndirme zaten tamamlandı.", show_alert=True)
+
     if task.done() or task.cancelled():
-        return await CallbackQuery.answer("İndirme zaten tamamlandı veya iptal edildi.", show_alert=True)
+        return await CallbackQuery.answer(
+            "İndirme zaten Tamamlandı veya İptal Edildi.", show_alert=True
+        )
+
     try:
         task.cancel()
         lyrical.pop(message_id, None)
-        await CallbackQuery.answer("İndirme iptal edildi", show_alert=True)
-        await CallbackQuery.edit_message_text(
-            f"İndirme iptal edildi {CallbackQuery.from_user.mention}"
+        await CallbackQuery.answer("İndirme İptal Edildi", show_alert=True)
+        return await CallbackQuery.edit_message_text(
+            f"İndirme İptal Edildi {CallbackQuery.from_user.mention}"
         )
     except:
-        await CallbackQuery.answer("İndirme durdurulamadı.", show_alert=True)
+        return await CallbackQuery.answer("İndirme durdurulamadı.", show_alert=True)

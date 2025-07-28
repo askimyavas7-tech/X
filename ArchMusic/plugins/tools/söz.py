@@ -1,75 +1,77 @@
 import random
 import asyncio
-from collections import defaultdict
 from pyrogram import filters
 from pyrogram.types import Message
 from config import BANNED_USERS
 from ArchMusic import app
+from pyrogram.enums import ChatMemberStatus
 
-# ✅ Söz listesi (dilersen genişletebilirsin)
-SOZ_LISTESI = [
-    "Hayal gücü bilgiden daha önemlidir. – Albert Einstein",
-    "Yavaş git ama asla durma. – Confucius",
+# ✅ Pyrogram client (örneğin: app.bot, app.client olabilir)
+real_client = app.bot  # eğer hata alırsan bunu 'app' olarak değiştir
+
+# ✅ Kullanıcının iptal talebini takip etmek için
+cancel_users = {}
+
+# ✅ Söz listesi
+SOZLER = [
+    "Hayal gücü bilgiden daha önemlidir. – Einstein",
+    "İmkansız, sadece tembellerin bahanesidir.",
+    "Yavaş git ama asla durma.",
     "Her şey seninle başlar.",
-    "Gülüşün bu dünyaya armağan 😄",
-    "Senin enerjin etrafı aydınlatıyor 💡",
-    "Sen anlatılmaz, yaşanırsın 💌",
-    "Bir tebessümün bile yeter 🌸",
-    "Seninle geçirilen anlar unutulmaz 📸",
-    "Sen sadece bir isim değil, bir anlam taşıyorsun 🧡"
+    "İnsan en çok kendiyle savaşıyor.",
+    "İyi şeyler zaman alır.",
+    "Mutluluk bir varış noktası değil, yolculuktur.",
+    "Gerçek özgürlük kendin olabilmektir.",
+    "Fark yaratmak cesaret ister.",
+    "Bugün yapmadığın şey, yarın pişmanlığın olabilir.",
 ]
-
-# ✅ İptal listesi (kullanıcı bazlı)
-cancel_users = defaultdict(set)
 
 # ✅ /cancel komutu
 @app.on_message(filters.command("cancel") & filters.group & ~BANNED_USERS)
 async def cancel_soz(client, message: Message):
-    cancel_users[message.chat.id].add(message.from_user.id)
+    cancel_users[message.from_user.id] = True
     await message.reply("❌ Etiketleme işlemi iptal edildi.")
 
 # ✅ /soz komutu
 @app.on_message(filters.command("soz") & filters.group & ~BANNED_USERS)
-async def soz_etiketle(client, message: Message):
+async def soz_gonder(client, message: Message):
     user_id = message.from_user.id
     chat_id = message.chat.id
+    cancel_users[user_id] = False
 
-    if user_id in cancel_users[chat_id]:
-        cancel_users[chat_id].remove(user_id)
-        return await message.reply("⛔ Zaten iptal edilmişti.")
-
-    await message.reply("📨 Üyelere söz gönderiliyor... Durdurmak için `/cancel` yaz.")
-
-    try:
-        members = app.iter_chat_members(chat_id)
-    except Exception as e:
-        return await message.reply(f"⚠️ Üye listesi alınamadı:\n`{e}`")
+    await message.reply("📨 Üyeler etiketleniyor. Durdurmak için /cancel yaz.")
 
     etiketlenen = 0
     atilamayan = 0
 
-    async for member in members:
-        if member.user.is_bot:
-            continue
+    try:
+        async for member in real_client.iter_chat_members(chat_id):
+            if cancel_users.get(user_id):
+                await message.reply("🛑 Etiketleme işlemi iptal edildi.")
+                return
 
-        if user_id in cancel_users[chat_id]:
-            cancel_users[chat_id].remove(user_id)
-            return await message.reply("🛑 Etiketleme işlemi iptal edildi.")
+            if member.user.is_bot:
+                continue
 
-        soz = random.choice(SOZ_LISTESI)
-        try:
-            await message.reply(
-                f"👤 [{member.user.first_name}](tg://user?id={member.user.id})\n\n📝 _{soz}_",
-                quote=False
-            )
-            etiketlenen += 1
-        except:
-            atilamayan += 1
+            # Söz seç
+            soz = random.choice(SOZLER)
 
-        await asyncio.sleep(1.5)  # çok hızlı olmasın, flood koruması
+            try:
+                await message.reply(
+                    f"👤 [{member.user.first_name}](tg://user?id={member.user.id})\n\n📝 _{soz}_",
+                    quote=False
+                )
+                etiketlenen += 1
+            except Exception:
+                atilamayan += 1
+
+            await asyncio.sleep(1.5)
+
+    except Exception as e:
+        return await message.reply(f"⚠️ Üye listesi alınamadı:\n`{e}`")
 
     await message.reply(
-        f"✅ **Etiketleme Bitti**\n"
+        f"✅ **Etiketleme Tamamlandı**\n"
         f"👥 Etiketlenen: {etiketlenen}\n"
         f"❌ Atılamayan: {atilamayan}\n"
         f"🎯 Toplam: {etiketlenen + atilamayan}"

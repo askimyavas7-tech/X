@@ -57,40 +57,28 @@ GUZEL_SOZLER = [
     "Sen sadece bir isim değil, bir anlam taşıyorsun 🧡",
     "Senin güzelliğin içinden geliyor 🔥"
 ]
-
+# /ptag komutu: Tek kullanıcıya güzel sözle etiket atar
 @app.on_message(filters.command("ptag") & filters.group & ~BANNED_USERS)
 async def tekli_guzel_soz(client, message: Message):
-    if len(message.command) == 1:
-        return await message.reply("Bir kullanıcı belirtmelisin: `/ptag @kullanici`", quote=True)
+    if len(message.command) < 2:
+        return await message.reply("❗ Lütfen bir kullanıcı adı belirtin: `/ptag @kullanici`")
 
-    etiket_sayisi = 0
-    basarisiz_sayisi = 0
-    etiket_sirasi = 0
-
+    kullanici_adi = message.text.split()[1]
     try:
-        kullanici_adi = message.text.split()[1]
-        user = await client.get_users(kullanici_adi)
+        user = await app.get_users(kullanici_adi)
         soz = random.choice(GUZEL_SOZLER)
         await message.reply(
-            f"{soz} [{user.first_name}](tg://user?id={user.id})",
+            f"{soz}\n\n👤 [{user.first_name}](tg://user?id={user.id})",
+            quote=False
+        )
+        await message.reply(
+            f"✅ Etiketleme tamamlandı: [{user.first_name}](tg://user?id={user.id})",
             quote=True
         )
-        etiket_sayisi += 1
-        etiket_sirasi += 1
-    except Exception:
-        basarisiz_sayisi += 1
-        await message.reply("❌ Kullanıcıyı bulamadım veya etiket hatalı.", quote=True)
+    except Exception as e:
+        await message.reply(f"❌ Kullanıcı bulunamadı ya da hata oluştu.\n\n`{e}`", quote=True)
 
-    toplam = etiket_sayisi + basarisiz_sayisi
-
-    await message.reply(
-        f"✅ Etiketlenen: `{etiket_sayisi}`\n"
-        f"❌ Atlanılan: `{basarisiz_sayisi}`\n"
-        f"🏁 Biten Toplam İşlem: `{toplam}`\n"
-        f"🔢 Etiket sırası: `{etiket_sirasi}`"
-    )
-
-
+# Bilgilendirme komutu: /cancel_ptag (aktif iptal işlemi olmadığını belirtir)
 @app.on_message(filters.command("cancel_ptag") & filters.group & ~BANNED_USERS)
 async def cancel_ptag(client, message: Message):
-    await message.reply("🔹 Tekli etiketleme anlık çalışır, iptal edilecek işlem yok.")
+    await message.reply("ℹ️ Tekli etiketleme komutu anlık çalışır. İptal edilecek bir işlem yok.")

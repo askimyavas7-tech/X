@@ -135,11 +135,24 @@ async def start_tagging(client, cq: CallbackQuery):
 @app.on_callback_query(filters.regex(r"cancel_tag:(\d+)"))
 async def cancel_tagging(client, cq: CallbackQuery):
     uid = int(cq.matches[0].group(1))
+    chat_id = cq.message.chat.id
+
+    # Debugging: Hangi kullanıcı ve chat üzerinde işlem yapıldığını kontrol et
+    print(f"Cancel Tagging - User: {cq.from_user.id}, Requested User: {uid}, Chat ID: {chat_id}")  
+
     if cq.from_user.id != uid:
         return await cq.answer("Sadece başlatan iptal edebilir.", show_alert=True)
 
-    chat_id = cq.message.chat.id
+    session = tag_sessions.get(chat_id)
+    if not session:
+        return await cq.answer("Etiketleme bulunamadı.", show_alert=True)
+
+    # Etiketleme işlemini iptal ediyoruz
+    print(f"Session Active: {session['active']}")  # Debugging: session aktif mi?
+    session["active"] = False
     tag_sessions.pop(chat_id, None)
+
+    # Kullanıcıya iptal mesajı gönderiyoruz
     await cq.message.edit_text("❌ Etiketleme iptal edildi.")
     await cq.answer("İşlem iptal edildi.")
 

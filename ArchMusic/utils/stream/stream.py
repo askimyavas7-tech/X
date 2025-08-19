@@ -352,3 +352,4 @@ async def stream(
             db[chat_id][0]["markup"] = "tg"
             if mystic:
                 await mystic.delete()
+

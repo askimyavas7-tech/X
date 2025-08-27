@@ -49,24 +49,27 @@ MAX_REQUESTS = 5      # 5 saniyede en fazla 5 istek
 TIME_WINDOW = 5       # saniye
 MAX_WARNINGS = 2      # 2 uyarıdan sonra bot gruptan ayrılır
 
-          Spam Kontrol Fonksiyonu
+          # Spam Kontrol Fonksiyonu
 async def check_spam(message: Message) -> bool:
     """Kullanıcının spam yapıp yapmadığını kontrol eder.
     Spam varsa True döner, değilse False döner."""
-    global spam_records, spam_warnings
+    global spam_records, spam_warnings, spam_protection
 
     if not spam_protection:
         return False
-      user_id = message.from_user.id
+
+    user_id = message.from_user.id
     current_time = time.time()
-Kullanıcı kayıtlarını güncelle
+
+    # Kullanıcı kayıtlarını güncelle
     if user_id not in spam_records:
         spam_records[user_id] = []
     spam_records[user_id] = [
         ts for ts in spam_records[user_id] if current_time - ts <= TIME_WINDOW
     ]
     spam_records[user_id].append(current_time)
-# Spam kontrolü
+
+    # Spam kontrolü
     if len(spam_records[user_id]) >= MAX_REQUESTS:
         spam_warnings[user_id] = spam_warnings.get(user_id, 0) + 1
 
@@ -75,7 +78,7 @@ Kullanıcı kayıtlarını güncelle
                 f"🚨 **{message.from_user.mention} spam yapmaya devam ediyor!**\n\n"
                 f"❌ Bot, gruptan ayrılıyor..."
             )
-          chat = message.chat
+            chat = message.chat
             group_link = f"@{chat.username}" if chat.username else "Gizli"
             await app.send_message(
                 config.LOG_GROUP_ID,
@@ -97,6 +100,7 @@ Kullanıcı kayıtlarını güncelle
             )
             return True
     return False
+
 # Spam toggle komutu (sadece OWNER kullanabilir)
 @app.on_message(filters.command("spam") & filters.user(config.OWNER_ID))
 async def spam_toggle(client, message: Message):

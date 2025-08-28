@@ -1,7 +1,7 @@
 import os
+import logging
 from random import randint
 from typing import Union
-
 from pyrogram.types import InlineKeyboardMarkup
 
 import config
@@ -19,6 +19,8 @@ from ArchMusic.utils.inline.playlist import close_markup
 from ArchMusic.utils.pastebin import ArchMusicbin
 from ArchMusic.utils.stream.queue import put_queue, put_queue_index
 
+# Basit loglama
+logging.basicConfig(level=logging.INFO)
 
 async def stream(
     _,
@@ -36,13 +38,15 @@ async def stream(
     if not result:
         return
 
+    logging.info(f"{user_name} ({user_id}) requested {streamtype} in chat {chat_id}")
+
     if video and not await is_video_allowed(chat_id):
         raise AssistantErr(_["play_7"])
 
     if forceplay:
         await ArchMusic.force_stop_stream(chat_id)
 
-    # PLAYLIST
+    # --------------------- PLAYLIST ---------------------
     if streamtype == "playlist":
         msg = f"{_['playlist_16']}\n\n"
         count = 0
@@ -55,6 +59,8 @@ async def stream(
                 )
             except Exception:
                 continue
+
+            # Parça süresi kontrolü
             if str(duration_min) == "None" or duration_sec is None or duration_sec > config.DURATION_LIMIT:
                 continue
 
@@ -74,6 +80,9 @@ async def stream(
                 count += 1
                 msg += f"{count}- {title[:70]}\n"
                 msg += f"{_['playlist_17']} {position}\n\n"
+
+                await app.send_message(original_chat_id, f"🎵 {title} sıraya eklendi. Pozisyon: {position}")
+                logging.info(f"Added {title} to queue at position {position}")
             else:
                 if not forceplay:
                     db[chat_id] = []
@@ -83,6 +92,7 @@ async def stream(
                         vidid, mystic, video=status, videoid=True
                     )
                 except Exception as e:
+                    logging.error(f"Error downloading {title}: {str(e)}")
                     raise AssistantErr(f"{_['play_16']} | {str(e)}")
 
                 await ArchMusic.join_call(chat_id, original_chat_id, file_path, video=status)
@@ -118,15 +128,20 @@ async def stream(
         upl = close_markup(_)
         return await app.send_message(original_chat_id, text=_["playlist_18"].format(link, position), reply_markup=upl)
 
-    # YOUTUBE
+    # --------------------- YOUTUBE ---------------------
     elif streamtype == "youtube":
         vidid = result["vidid"]
         title = (result["title"]).title()
         duration_min = result["duration_min"]
+
+        if duration_min is not None and duration_min > config.DURATION_LIMIT:
+            return await app.send_message(original_chat_id, "⚠️ Parça süresi çok uzun!")
+
         status = True if video else None
         try:
             file_path, direct = await YouTube.download(vidid, mystic, videoid=True, video=status)
         except Exception as e:
+            logging.error(f"Error downloading {title}: {str(e)}")
             raise AssistantErr(f"{_['play_16']} | {str(e)}")
 
         if await is_active_chat(chat_id):
@@ -143,6 +158,7 @@ async def stream(
             )
             position = len(db.get(chat_id, [])) - 1
             await app.send_message(original_chat_id, _["queue_4"].format(position, title, duration_min, user_name))
+            logging.info(f"Added {title} to queue at position {position}")
         else:
             if not forceplay:
                 db[chat_id] = []
@@ -170,12 +186,17 @@ async def stream(
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "stream"
+            logging.info(f"Started streaming {title}")
 
-    # SOUNDCLOUD
+    # --------------------- SOUNDCLOUD ---------------------
     elif streamtype == "soundcloud":
         file_path = result["filepath"]
         title = result["title"]
         duration_min = result["duration_min"]
+
+        if duration_min is not None and duration_min > config.DURATION_LIMIT:
+            return await app.send_message(original_chat_id, "⚠️ Parça süresi çok uzun!")
+
         if await is_active_chat(chat_id):
             await put_queue(
                 chat_id,
@@ -190,6 +211,7 @@ async def stream(
             )
             position = len(db.get(chat_id, [])) - 1
             await app.send_message(original_chat_id, _["queue_4"].format(position, title, duration_min, user_name))
+            logging.info(f"Added {title} (SoundCloud) to queue at position {position}")
         else:
             if not forceplay:
                 db[chat_id] = []
@@ -209,14 +231,16 @@ async def stream(
             run = await app.send_message(original_chat_id, text=_["stream_3"].format(title, duration_min, user_name))
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
+            logging.info(f"Started streaming {title} (SoundCloud)")
 
-    # TELEGRAM
+    # --------------------- TELEGRAM ---------------------
     elif streamtype == "telegram":
         file_path = result["path"]
         link = result["link"]
         title = (result["title"]).title()
         duration_min = result["dur"]
         status = True if video else None
+
         if await is_active_chat(chat_id):
             await put_queue(
                 chat_id,
@@ -231,6 +255,7 @@ async def stream(
             )
             position = len(db.get(chat_id, [])) - 1
             await app.send_message(original_chat_id, _["queue_4"].format(position, title, duration_min, user_name))
+            logging.info(f"Added {title} (Telegram) to queue at position {position}")
         else:
             if not forceplay:
                 db[chat_id] = []
@@ -252,14 +277,16 @@ async def stream(
             run = await app.send_message(original_chat_id, text=_["stream_4"].format(title, link, duration_min, user_name))
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
+            logging.info(f"Started streaming {title} (Telegram)")
 
-    # LIVE
+    # --------------------- LIVE ---------------------
     elif streamtype == "live":
         link = result["link"]
         vidid = result["vidid"]
         title = (result["title"]).title()
         duration_min = "Live Track"
         status = True if video else None
+
         if await is_active_chat(chat_id):
             await put_queue(
                 chat_id,
@@ -274,6 +301,7 @@ async def stream(
             )
             position = len(db.get(chat_id, [])) - 1
             await app.send_message(original_chat_id, _["queue_4"].format(position, title, duration_min, user_name))
+            logging.info(f"Added {title} (Live) to queue at position {position}")
         else:
             if not forceplay:
                 db[chat_id] = []
@@ -304,12 +332,14 @@ async def stream(
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
+            logging.info(f"Started streaming {title} (Live)")
 
-    # INDEX / M3U8
+    # --------------------- INDEX / M3U8 ---------------------
     elif streamtype == "index":
         link = result
         title = "Index or M3u8 Link"
         duration_min = "URL stream"
+
         if await is_active_chat(chat_id):
             await put_queue_index(
                 chat_id,
@@ -324,6 +354,7 @@ async def stream(
             position = len(db.get(chat_id, [])) - 1
             if mystic:
                 await mystic.edit_text(_["queue_4"].format(position, title, duration_min, user_name))
+            logging.info(f"Added {title} (Index) to queue at position {position}")
         else:
             if not forceplay:
                 db[chat_id] = []
@@ -352,4 +383,4 @@ async def stream(
             db[chat_id][0]["markup"] = "tg"
             if mystic:
                 await mystic.delete()
-
+            logging.info(f"Started streaming {title} (Index)")

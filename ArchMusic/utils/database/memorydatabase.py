@@ -9,7 +9,7 @@
 #
 
 import config
-from ArchMusic.utils.database.database import is_on_off
+from ArchMusic.utils.database import is_on_off  # <-- Düzeltilmiş import
 
 from config import PRIVATE_BOT_MODE
 from ArchMusic.core.mongo import mongodb

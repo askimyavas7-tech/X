@@ -89,7 +89,7 @@ async def helper_cb(client, callback: types.CallbackQuery, _):
     if cb == "hb7":
         if callback.from_user.id not in SUDOERS:
             return await callback.answer("Sadece Sudo Kullanıcıları İçin", show_alert=True)
-        await callback.edit_message_text(helpers.HELP_7, reply_markup=keyboard)
+        await callback.edit_message_text(helpers.HELP_6, reply_markup=keyboard)
         return
 
     # Yardım kategorileri
@@ -99,9 +99,8 @@ async def helper_cb(client, callback: types.CallbackQuery, _):
         "hb3": helpers.HELP_3,
         "hb4": helpers.HELP_4,
         "hb5": helpers.HELP_5,
-        "hb6": helpers.HELP_6,
-        "hb8": helpers.HELP_8,
-        "hb9": helpers.HELP_9,
+        
+        ,
     }
 
     if cb in help_sections:

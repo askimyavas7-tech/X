@@ -28,6 +28,11 @@ def stream_markup_timer(_, chat_id, played, dur):
     return buttons
 
 
+def stream_markup(_, videoid, chat_id):
+    # Şimdilik boş dönüyor, import hatasını önlemek için eklendi
+    return []
+
+
 # ---------- Telegram Markup ----------
 
 def telegram_markup_timer(_, chat_id, played, dur):
@@ -182,5 +187,3 @@ def panel_markup_3(_, videoid, chat_id):
         ],
     ]
     return buttons
-
-

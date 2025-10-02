@@ -1,4 +1,4 @@
-import math
+rol Panort math
 from pyrogram.types import InlineKeyboardButton
 from ArchMusic.utils.formatters import time_to_seconds
 
@@ -25,7 +25,7 @@ def stream_markup_timer(_, videoid, chat_id, played, dur):
         [InlineKeyboardButton(text=f"{played_time} ❤️ {total_time}", callback_data="GetTimer")],
         # Alt satır
         [
-            InlineKeyboardButton(text="🔮 Kontrol Paneli", callback_data=f"PanelMarkup None|{chat_id}"),
+            InlineKeyboardButton(text="🔮 SES Paneli", callback_data=f"PanelMarkup None|{chat_id}"),
         ],
     ]
     return buttons

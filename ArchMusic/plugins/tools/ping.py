@@ -1,5 +1,4 @@
-   from datetime import datetime
-
+from datetime import datetime
 from pyrogram import filters
 from pyrogram.types import Message
 
@@ -10,7 +9,6 @@ from ArchMusic.core.call import ArchMusic
 from ArchMusic.utils import bot_sys_stats
 from ArchMusic.utils.decorators.language import language
 
-### Commands
 PING_COMMAND = get_command("PING_COMMAND")
 
 
@@ -29,7 +27,6 @@ def generate_bar(usage: float, length: int = 20) -> str:
 @language
 async def ping_com(client, message: Message, _):
     try:
-        # Ping mesajı sadece metin ile gönderiliyor
         start_time = datetime.now()
 
         # Bot ve sistem pingleri
@@ -79,4 +76,4 @@ async def ping_com(client, message: Message, _):
 
     except Exception as e:
         await message.reply_text(f"❌ Ping alınırken bir hata oluştu.\nHata: {e}")
-
+       

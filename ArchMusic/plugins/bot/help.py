@@ -86,10 +86,10 @@ async def helper_cb(client, callback: types.CallbackQuery, _):
     keyboard = help_back_markup(_)
 
     # Sadece sudo kullanıcıları için
-    if cb == "hb6":
+    if cb == "hb4":
         if callback.from_user.id not in SUDOERS:
             return await callback.answer("Sadece Sudo Kullanıcıları İçin", show_alert=True)
-        await callback.edit_message_text(helpers.HELP_6, reply_markup=keyboard)
+        await callback.edit_message_text(helpers.HELP_4, reply_markup=keyboard)
         return
 
     # Yardım kategorileri
@@ -98,7 +98,7 @@ async def helper_cb(client, callback: types.CallbackQuery, _):
         "hb2": helpers.HELP_2,
         "hb3": helpers.HELP_3,
         "hb4": helpers.HELP_4,
-        "hb5": helpers.HELP_5,
+        
     }
 
     if cb in help_sections:

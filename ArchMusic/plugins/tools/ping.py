@@ -21,16 +21,32 @@ PING_COMMAND = get_command("PING_COMMAND")
 )
 @language
 async def ping_com(client, message: Message, _):
+    # İlk mesaj, ping hesaplanıyor bilgisi
     response = await message.reply_text(
         _["ping_1"]
     )
+
     start = datetime.now()
+    
+    # Bot ve Telegram ping değerleri
     pytgping = await ArchMusic.ping()
+    
+    # Sistem istatistikleri
     UP, CPU, RAM, DISK = await bot_sys_stats()
+    
+    # Geçen süreyi hesapla (ms)
     resp = (datetime.now() - start).microseconds / 1000
+
+    # Mesajı düzenle ve ekstra emoji ile bilgileri göster
     await response.edit_text(
         _["ping_2"].format(
-            MUSIC_BOT_NAME, resp, UP, DISK, CPU, RAM, pytgping
-        )
+            MUSIC_BOT_NAME,
+            resp,
+            UP,
+            DISK,
+            CPU,
+            RAM,
+            pytgping
+        ) + "\n\n⚡ Hızlı Ping | 📊 Sistem Durumu ✅"
     )
     

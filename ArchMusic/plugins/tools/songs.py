@@ -28,8 +28,8 @@ from ArchMusic.utils.inline.song import song_markup
 # Komut tanımı
 SONG_COMMAND = get_command("SONG_COMMAND")
 
-# ✅ Cookies yolu
-COOKIES_PATH = "cookies.txt"
+# ✅ Cookie dosyası yolu
+cookie_dir = "cookies.txt"
 
 
 @app.on_message(
@@ -127,7 +127,7 @@ async def song_helper_cb(client, CallbackQuery, _):
     # ✅ Cookies kullanarak biçim listesi al
     ytdl_opts = {
         "quiet": True,
-        "cookiefile": COOKIES_PATH if os.path.exists(COOKIES_PATH) else None,
+        "cookiefile": cookie_dir if os.path.exists(cookie_dir) else None,
         "skip_download": True,
     }
 
@@ -203,7 +203,7 @@ async def song_download_cb(client, CallbackQuery, _):
     # ✅ Cookies destekli yt_dlp ayarları
     ytdl_opts = {
         "quiet": True,
-        "cookiefile": COOKIES_PATH if os.path.exists(COOKIES_PATH) else None,
+        "cookiefile": cookie_dir if os.path.exists(cookie_dir) else None,
     }
 
     with yt_dlp.YoutubeDL(ytdl_opts) as ytdl:
@@ -224,7 +224,7 @@ async def song_download_cb(client, CallbackQuery, _):
                 songvideo=True,
                 format_id=format_id,
                 title=title,
-                cookies=COOKIES_PATH if os.path.exists(COOKIES_PATH) else None,
+                cookies=cookie_dir if os.path.exists(cookie_dir) else None,
             )
         except Exception as e:
             return await mystic.edit_text(_["song_9"].format(e))
@@ -257,7 +257,7 @@ async def song_download_cb(client, CallbackQuery, _):
                 songaudio=True,
                 format_id=format_id,
                 title=title,
-                cookies=COOKIES_PATH if os.path.exists(COOKIES_PATH) else None,
+                cookies=cookie_dir if os.path.exists(cookie_dir) else None,
             )
         except Exception as e:
             return await mystic.edit_text(_["song_9"].format(e))

@@ -8,10 +8,13 @@ import config
 from ArchMusic import Carbon, YouTube, app
 from ArchMusic.core.call import ArchMusic
 from ArchMusic.misc import db
-from ArchMusic.utils.database import (add_active_chat,
-                                     add_active_video_chat,
-                                     is_active_chat,
-                                     is_video_allowed, music_on)
+from ArchMusic.utils.database import (
+    add_active_chat,
+    add_active_video_chat,
+    is_active_chat,
+    is_video_allowed,
+    music_on
+)
 from ArchMusic.utils.exceptions import AssistantErr
 from ArchMusic.utils.inline.play import stream_markup
 from ArchMusic.utils.inline.playlist import close_markup
@@ -108,6 +111,7 @@ async def stream(
                         duration_min,
                         user_name
                     ),
+                    reply_markup=InlineKeyboardMarkup(stream_markup(_, vidid, chat_id))
                 )
                 if chat_id in db and db[chat_id]:
                     db[chat_id][0]["mystic"] = run
@@ -183,6 +187,7 @@ async def stream(
                     duration_min,
                     user_name
                 ),
+                reply_markup=InlineKeyboardMarkup(stream_markup(_, vidid, chat_id))
             )
             if chat_id in db and db[chat_id]:
                 db[chat_id][0]["mystic"] = run
@@ -229,6 +234,7 @@ async def stream(
             run = await app.send_message(
                 original_chat_id,
                 text=_["stream_3"].format(title, duration_min, user_name),
+                reply_markup=InlineKeyboardMarkup(stream_markup(_, title, chat_id))
             )
             if chat_id in db and db[chat_id]:
                 db[chat_id][0]["mystic"] = run
@@ -279,6 +285,7 @@ async def stream(
             run = await app.send_message(
                 original_chat_id,
                 text=_["stream_4"].format(title, link, duration_min, user_name),
+                reply_markup=InlineKeyboardMarkup(stream_markup(_, title, chat_id))
             )
             if chat_id in db and db[chat_id]:
                 db[chat_id][0]["mystic"] = run
@@ -335,6 +342,7 @@ async def stream(
                     duration_min,
                     user_name
                 ),
+                reply_markup=InlineKeyboardMarkup(stream_markup(_, vidid, chat_id))
             )
             if chat_id in db and db[chat_id]:
                 db[chat_id][0]["mystic"] = run
@@ -378,6 +386,7 @@ async def stream(
             run = await app.send_message(
                 original_chat_id,
                 text=_["stream_2"].format(title, link, duration_min, user_name),
+                reply_markup=InlineKeyboardMarkup(stream_markup(_, title, chat_id))
             )
             if chat_id in db and db[chat_id]:
                 db[chat_id][0]["mystic"] = run

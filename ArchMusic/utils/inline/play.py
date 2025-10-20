@@ -1,56 +1,15 @@
-#
 
-
-import math
-from pyrogram.types import InlineKeyboardButton
-
-# ───────────────────────────────
-# 🔹 Basit ve şık zaman dönüştürücü
-# ───────────────────────────────
-def time_to_sec(t):
-    parts = list(map(int, t.split(":")))
-    return parts[0] * 60 + parts[1] if len(parts) == 2 else 0
-
-
-# ───────────────────────────────
-# 💫 Parıltılı ilerleme çubuğu
-# ───────────────────────────────
-def progress_bar(played, total):
-    played_sec = time_to_sec(played)
-    total_sec = time_to_sec(total) or 1
-    ratio = played_sec / total_sec
-    pos = int(ratio * 10)
-    bar = ""
-    for i in range(10):
-        if i == pos:
-            bar += "🔹"  # mavi parıltı noktası
-        else:
-            bar += "⠂"  # zarif çizgi efekti
-    return f"{played}  {bar}  {total}"
-
-
-# ───────────────────────────────
-# 🎧 Stream oynatma (YouTube vb.)
-# ───────────────────────────────
-def stream_markup_timer(_, videoid, chat_id, played, dur):
+def stream_markup(_, videoid, chat_id):
     buttons = [
         [InlineKeyboardButton("🌌  ᴅᴜʏᴜʀᴜ 🌌", url="https://t.me/Hebunbots")],
-        [InlineKeyboardButton(text=progress_bar(played, dur), callback_data="nonclickable")],
-        [
-            InlineKeyboardButton("⏮", callback_data=f"ADMIN 1|{chat_id}"),
-            
-            InlineKeyboardButton("⏭", callback_data=f"ADMIN 2|{chat_id}"),
-            
-        ],
+        
+        
         [
             InlineKeyboardButton("💎 Listeye Ekle", callback_data=f"add_playlist {videoid}"),
             InlineKeyboardButton("✨ Kontrol Paneli", callback_data=f"PanelMarkup None|{chat_id}"),
         ],
     ]
     return buttons
-
-
-# ───────────────────────────────
 
 
 

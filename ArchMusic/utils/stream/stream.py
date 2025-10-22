@@ -29,34 +29,41 @@ async def stream(
     chat_id,
     user_name,
     original_chat_id,
-    video: Union[bool, str] = None,
-    streamtype: Union[bool, str] = None,
-    spotify: Union[bool, str] = None,
-    forceplay: Union[bool, str] = None,
+    video: Union[bool, str, None] = None,
+    streamtype: Union[bool, str, None] = None,
+    spotify: Union[bool, str, None] = None,
+    forceplay: Union[bool, str, None] = None,
 ):
-    if not result:
+    # --- Güvenlik kontrolleri ---
+    if result is None:
         return
+    if not isinstance(video, (bool, str, type(None))):
+        video = None
+    if not isinstance(forceplay, (bool, str, type(None))):
+        forceplay = None
+    if not isinstance(streamtype, (bool, str, type(None))):
+        streamtype = None
+
     if video:
         if not await is_video_allowed(chat_id):
             raise AssistantErr(_["play_7"])
     if forceplay:
         await ArchMusic.force_stop_stream(chat_id)
 
-    # PLAYLIST STREAM --------------------------------------------------------
+    # --- PLAYLIST STREAM ---
     if streamtype == "playlist":
+        if not isinstance(result, list):
+            return
         msg = f"{_['playlist_16']}\n\n"
         count = 0
         for search in result:
-            if int(count) == config.PLAYLIST_FETCH_LIMIT:
+            if count >= config.PLAYLIST_FETCH_LIMIT:
                 continue
             try:
-                (
-                    title,
-                    duration_min,
-                    duration_sec,
-                    thumbnail,
-                    vidid,
-                ) = await YouTube.details(search, False if spotify else True)
+                details = await YouTube.details(search, False if not spotify else True)
+                if not isinstance(details, (list, tuple)) or len(details) < 5:
+                    continue
+                title, duration_min, duration_sec, thumbnail, vidid = details
             except:
                 continue
 
@@ -79,7 +86,7 @@ async def stream(
                     user_id,
                     "video" if video else "audio",
                 )
-                position = len(db.get(chat_id)) - 1
+                position = len(db.get(chat_id, [])) - 1
                 count += 1
                 msg += f"{count}- {title[:70]}\n"
                 msg += f"{_['playlist_17']} {position}\n\n"
@@ -120,8 +127,6 @@ async def stream(
             return
         else:
             link = await ArchMusicbin(msg)
-            lines = msg.count("\n")
-            car = os.linesep.join(msg.split(os.linesep)[:17])
             upl = close_markup(_)
             return await app.send_message(
                 original_chat_id,
@@ -129,12 +134,14 @@ async def stream(
                 reply_markup=upl,
             )
 
-    # YOUTUBE STREAM --------------------------------------------------------
+    # --- YOUTUBE STREAM ---
     elif streamtype == "youtube":
-        link = result["link"]
-        vidid = result["vidid"]
-        title = (result["title"]).title()
-        duration_min = result["duration_min"]
+        if not isinstance(result, dict):
+            return
+        link = result.get("link")
+        vidid = result.get("vidid")
+        title = (result.get("title") or "").title()
+        duration_min = result.get("duration_min")
         status = True if video else None
 
         n, stream_url = await YouTube.video(vidid, True)
@@ -153,7 +160,7 @@ async def stream(
                 user_id,
                 "video" if video else "audio",
             )
-            position = len(db.get(chat_id)) - 1
+            position = len(db.get(chat_id, [])) - 1
             await app.send_message(
                 original_chat_id,
                 _["queue_4"].format(position, title, duration_min, user_name),
@@ -190,11 +197,13 @@ async def stream(
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "stream"
 
-    # SOUNDCLOUD STREAM -----------------------------------------------------
+    # --- SOUNDCLOUD STREAM ---
     elif streamtype == "soundcloud":
-        file_path = result["filepath"]
-        title = result["title"]
-        duration_min = result["duration_min"]
+        if not isinstance(result, dict):
+            return
+        file_path = result.get("filepath")
+        title = result.get("title")
+        duration_min = result.get("duration_min")
 
         if await is_active_chat(chat_id):
             await put_queue(
@@ -208,7 +217,7 @@ async def stream(
                 user_id,
                 "audio",
             )
-            position = len(db.get(chat_id)) - 1
+            position = len(db.get(chat_id, [])) - 1
             await app.send_message(
                 original_chat_id,
                 _["queue_4"].format(position, title, duration_min, user_name),
@@ -238,12 +247,14 @@ async def stream(
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "stream"
 
-    # TELEGRAM STREAM -------------------------------------------------------
+    # --- TELEGRAM STREAM ---
     elif streamtype == "telegram":
-        file_path = result["path"]
-        link = result["link"]
-        title = (result["title"]).title()
-        duration_min = result["dur"]
+        if not isinstance(result, dict):
+            return
+        file_path = result.get("path")
+        link = result.get("link")
+        title = (result.get("title") or "").title()
+        duration_min = result.get("dur")
         status = True if video else None
 
         if await is_active_chat(chat_id):
@@ -258,7 +269,7 @@ async def stream(
                 user_id,
                 "video" if video else "audio",
             )
-            position = len(db.get(chat_id)) - 1
+            position = len(db.get(chat_id, [])) - 1
             await app.send_message(
                 original_chat_id,
                 _["queue_4"].format(position, title, duration_min, user_name),
@@ -291,8 +302,10 @@ async def stream(
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "stream"
 
-    # INDEX veya M3U8 STREAM ------------------------------------------------
+    # --- INDEX veya M3U8 STREAM ---
     elif streamtype == "index":
+        if not isinstance(result, str):
+            return
         link = result
         title = "Index or M3u8 Link"
         duration_min = "URL stream"
@@ -308,7 +321,7 @@ async def stream(
                 link,
                 "video" if video else "audio",
             )
-            position = len(db.get(chat_id)) - 1
+            position = len(db.get(chat_id, [])) - 1
             await mystic.edit_text(
                 _["queue_4"].format(position, title, duration_min, user_name)
             )

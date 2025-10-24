@@ -36,6 +36,7 @@ async def stream(
 ):
     # --- Güvenlik kontrolleri ---
     if result is None:
+        await mystic.delete() # Hata durumunda bekleme mesajını sil
         return
     if not isinstance(video, (bool, str, type(None))):
         video = None
@@ -46,6 +47,7 @@ async def stream(
 
     if video:
         if not await is_video_allowed(chat_id):
+            await mystic.delete()
             raise AssistantErr(_["play_7"])
     if forceplay:
         await ArchMusic.force_stop_stream(chat_id)
@@ -53,9 +55,13 @@ async def stream(
     # --- PLAYLIST STREAM ---
     if streamtype == "playlist":
         if not isinstance(result, list):
+            await mystic.delete()
             return
+        
         msg = f"{_['playlist_16']}\n\n"
         count = 0
+        is_first_track_started = False
+        
         for search in result:
             if count >= config.PLAYLIST_FETCH_LIMIT:
                 continue
@@ -75,6 +81,7 @@ async def stream(
                 continue
 
             if await is_active_chat(chat_id):
+                # Kuyruk mantığı (aktif yayın varsa)
                 await put_queue(
                     chat_id,
                     original_chat_id,
@@ -91,41 +98,55 @@ async def stream(
                 msg += f"{count}- {title[:70]}\n"
                 msg += f"{_['playlist_17']} {position}\n\n"
             else:
-                if not forceplay:
-                    db[chat_id] = []
-                status = True if video else None
-                await ArchMusic.join_call(
-                    chat_id, original_chat_id, stream_url, video=status
-                )
-                await put_queue(
-                    chat_id,
-                    original_chat_id,
-                    stream_url,
-                    title,
-                    duration_min,
-                    user_name,
-                    vidid,
-                    user_id,
-                    "video" if video else "audio",
-                    forceplay=forceplay,
-                )
-                button = stream_markup(_, vidid, chat_id)
-                run = await app.send_message(
-                    original_chat_id,
-                    text=_["stream_1"].format(
+                # İlk şarkıyı oynatma girişimi (Hata yakalama bloğu eklendi)
+                try:
+                    if not forceplay:
+                        db[chat_id] = []
+                    status = True if video else None
+                    await ArchMusic.join_call(
+                        chat_id, original_chat_id, stream_url, video=status
+                    )
+                    await put_queue(
+                        chat_id,
+                        original_chat_id,
+                        stream_url,
                         title,
-                        f"https://t.me/{app.username}?start=info_{vidid}",
                         duration_min,
                         user_name,
-                    ),
-                    reply_markup=InlineKeyboardMarkup(button),
-                )
-                db[chat_id][0]["mystic"] = run
-                db[chat_id][0]["markup"] = "stream"
-
-        if count == 0:
-            return
+                        vidid,
+                        user_id,
+                        "video" if video else "audio",
+                        forceplay=forceplay,
+                    )
+                    button = stream_markup(_, vidid, chat_id)
+                    run = await app.send_message(
+                        original_chat_id,
+                        text=_["stream_1"].format(
+                            title,
+                            f"https://t.me/{app.username}?start=info_{vidid}",
+                            duration_min,
+                            user_name,
+                        ),
+                        reply_markup=InlineKeyboardMarkup(button),
+                    )
+                    db[chat_id][0]["mystic"] = run
+                    db[chat_id][0]["markup"] = "stream"
+                    is_first_track_started = True # Başlatma başarılı
+                except Exception as e:
+                    # Akış hatası (NoAudioSourceFound) yakalandı
+                    await mystic.delete()
+                    return await app.send_message(original_chat_id, _["stream_error"].format(title, e))
+        
+        # Oynatma listesi döngüsü bittikten sonra temizlik ve sonuç
+        if not is_first_track_started:
+            await mystic.delete()
+            if count == 0:
+                # Hiçbir parça uygun değil veya URL alınamadı.
+                return await app.send_message(original_chat_id, _["playlist_empty_error"])
+            return # Kuyruğa eklenenler varsa, sessizce çık.
+        
         else:
+            # En az bir parça başladı veya kuyruğa eklendi
             link = await ArchMusicbin(msg)
             upl = close_markup(_)
             return await app.send_message(
@@ -137,6 +158,7 @@ async def stream(
     # --- YOUTUBE STREAM ---
     elif streamtype == "youtube":
         if not isinstance(result, dict):
+            await mystic.delete()
             return
         link = result.get("link")
         vidid = result.get("vidid")
@@ -146,110 +168,74 @@ async def stream(
 
         n, stream_url = await YouTube.video(vidid, True)
         if n == 0:
+            await mystic.delete()
             raise AssistantErr(_["str_3"])
 
         if await is_active_chat(chat_id):
+            # Kuyruk mantığı
             await put_queue(
-                chat_id,
-                original_chat_id,
-                stream_url,
-                title,
-                duration_min,
-                user_name,
-                vidid,
-                user_id,
-                "video" if video else "audio",
+                chat_id, original_chat_id, stream_url, title, duration_min, user_name, vidid, user_id, "video" if video else "audio",
             )
             position = len(db.get(chat_id, [])) - 1
-            await app.send_message(
-                original_chat_id,
-                _["queue_4"].format(position, title, duration_min, user_name),
-            )
+            await app.send_message(original_chat_id, _["queue_4"].format(position, title, duration_min, user_name),)
         else:
-            if not forceplay:
-                db[chat_id] = []
-            await ArchMusic.join_call(
-                chat_id, original_chat_id, stream_url, video=status
-            )
-            await put_queue(
-                chat_id,
-                original_chat_id,
-                stream_url,
-                title,
-                duration_min,
-                user_name,
-                vidid,
-                user_id,
-                "video" if video else "audio",
-                forceplay=forceplay,
-            )
-            button = stream_markup(_, vidid, chat_id)
-            run = await app.send_message(
-                original_chat_id,
-                text=_["stream_1"].format(
-                    title,
-                    f"https://t.me/{app.username}?start=info_{vidid}",
-                    duration_min,
-                    user_name,
-                ),
-                reply_markup=InlineKeyboardMarkup(button),
-            )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "stream"
+            # Oynatma başlangıcı (Hata yakalama bloğu eklendi)
+            try:
+                if not forceplay:
+                    db[chat_id] = []
+                await ArchMusic.join_call(chat_id, original_chat_id, stream_url, video=status)
+                await put_queue(
+                    chat_id, original_chat_id, stream_url, title, duration_min, user_name, vidid, user_id, "video" if video else "audio", forceplay=forceplay,
+                )
+                button = stream_markup(_, vidid, chat_id)
+                run = await app.send_message(
+                    original_chat_id, text=_["stream_1"].format(title, f"https://t.me/{app.username}?start=info_{vidid}", duration_min, user_name), reply_markup=InlineKeyboardMarkup(button),
+                )
+                db[chat_id][0]["mystic"] = run
+                db[chat_id][0]["markup"] = "stream"
+            except Exception as e:
+                # NoAudioSourceFound hatası yakalandı
+                await mystic.delete()
+                return await app.send_message(original_chat_id, _["stream_error"].format(title, e))
 
     # --- SOUNDCLOUD STREAM ---
     elif streamtype == "soundcloud":
         if not isinstance(result, dict):
+            await mystic.delete()
             return
         file_path = result.get("filepath")
         title = result.get("title")
         duration_min = result.get("duration_min")
 
         if await is_active_chat(chat_id):
+            # Kuyruk mantığı
             await put_queue(
-                chat_id,
-                original_chat_id,
-                file_path,
-                title,
-                duration_min,
-                user_name,
-                streamtype,
-                user_id,
-                "audio",
+                chat_id, original_chat_id, file_path, title, duration_min, user_name, streamtype, user_id, "audio",
             )
             position = len(db.get(chat_id, [])) - 1
-            await app.send_message(
-                original_chat_id,
-                _["queue_4"].format(position, title, duration_min, user_name),
-            )
+            await app.send_message(original_chat_id, _["queue_4"].format(position, title, duration_min, user_name),)
         else:
-            if not forceplay:
-                db[chat_id] = []
-            await ArchMusic.join_call(chat_id, original_chat_id, file_path, video=None)
-            await put_queue(
-                chat_id,
-                original_chat_id,
-                file_path,
-                title,
-                duration_min,
-                user_name,
-                streamtype,
-                user_id,
-                "audio",
-                forceplay=forceplay,
-            )
-            button = stream_markup(_, "soundcloud", chat_id)
-            run = await app.send_message(
-                original_chat_id,
-                text=_["stream_3"].format(title, duration_min, user_name),
-                reply_markup=InlineKeyboardMarkup(button),
-            )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "stream"
+            # Oynatma başlangıcı (Hata yakalama bloğu eklendi)
+            try:
+                if not forceplay:
+                    db[chat_id] = []
+                await ArchMusic.join_call(chat_id, original_chat_id, file_path, video=None)
+                await put_queue(
+                    chat_id, original_chat_id, file_path, title, duration_min, user_name, streamtype, user_id, "audio", forceplay=forceplay,
+                )
+                button = stream_markup(_, "soundcloud", chat_id)
+                run = await app.send_message(original_chat_id, text=_["stream_3"].format(title, duration_min, user_name), reply_markup=InlineKeyboardMarkup(button),)
+                db[chat_id][0]["mystic"] = run
+                db[chat_id][0]["markup"] = "stream"
+            except Exception as e:
+                # Akış hatası yakalandı
+                await mystic.delete()
+                return await app.send_message(original_chat_id, _["stream_error"].format(title, e))
 
     # --- TELEGRAM STREAM ---
     elif streamtype == "telegram":
         if not isinstance(result, dict):
+            await mystic.delete()
             return
         file_path = result.get("path")
         link = result.get("link")
@@ -258,96 +244,68 @@ async def stream(
         status = True if video else None
 
         if await is_active_chat(chat_id):
+            # Kuyruk mantığı
             await put_queue(
-                chat_id,
-                original_chat_id,
-                file_path,
-                title,
-                duration_min,
-                user_name,
-                streamtype,
-                user_id,
-                "video" if video else "audio",
+                chat_id, original_chat_id, file_path, title, duration_min, user_name, streamtype, user_id, "video" if video else "audio",
             )
             position = len(db.get(chat_id, [])) - 1
-            await app.send_message(
-                original_chat_id,
-                _["queue_4"].format(position, title, duration_min, user_name),
-            )
+            await app.send_message(original_chat_id, _["queue_4"].format(position, title, duration_min, user_name),)
         else:
-            if not forceplay:
-                db[chat_id] = []
-            await ArchMusic.join_call(chat_id, original_chat_id, file_path, video=status)
-            await put_queue(
-                chat_id,
-                original_chat_id,
-                file_path,
-                title,
-                duration_min,
-                user_name,
-                streamtype,
-                user_id,
-                "video" if video else "audio",
-                forceplay=forceplay,
-            )
-            if video:
-                await add_active_video_chat(chat_id)
+            # Oynatma başlangıcı (Hata yakalama bloğu eklendi)
+            try:
+                if not forceplay:
+                    db[chat_id] = []
+                await ArchMusic.join_call(chat_id, original_chat_id, file_path, video=status)
+                await put_queue(
+                    chat_id, original_chat_id, file_path, title, duration_min, user_name, streamtype, user_id, "video" if video else "audio", forceplay=forceplay,
+                )
+                if video:
+                    await add_active_video_chat(chat_id)
 
-            button = stream_markup(_, "telegram", chat_id)
-            run = await app.send_message(
-                original_chat_id,
-                text=_["stream_4"].format(title, link, duration_min, user_name),
-                reply_markup=InlineKeyboardMarkup(button),
-            )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "stream"
+                button = stream_markup(_, "telegram", chat_id)
+                run = await app.send_message(
+                    original_chat_id, text=_["stream_4"].format(title, link, duration_min, user_name), reply_markup=InlineKeyboardMarkup(button),
+                )
+                db[chat_id][0]["mystic"] = run
+                db[chat_id][0]["markup"] = "stream"
+            except Exception as e:
+                # Akış hatası yakalandı
+                await mystic.delete()
+                return await app.send_message(original_chat_id, _["stream_error"].format(title, e))
 
     # --- INDEX veya M3U8 STREAM ---
     elif streamtype == "index":
         if not isinstance(result, str):
+            await mystic.delete()
             return
         link = result
         title = "Index or M3u8 Link"
         duration_min = "URL stream"
 
         if await is_active_chat(chat_id):
+            # Kuyruk mantığı
             await put_queue_index(
-                chat_id,
-                original_chat_id,
-                "index_url",
-                title,
-                duration_min,
-                user_name,
-                link,
-                "video" if video else "audio",
+                chat_id, original_chat_id, "index_url", title, duration_min, user_name, link, "video" if video else "audio",
             )
             position = len(db.get(chat_id, [])) - 1
-            await mystic.edit_text(
-                _["queue_4"].format(position, title, duration_min, user_name)
-            )
+            await mystic.edit_text(_["queue_4"].format(position, title, duration_min, user_name))
         else:
-            if not forceplay:
-                db[chat_id] = []
-            await ArchMusic.join_call(
-                chat_id, original_chat_id, link, video=True if video else None
-            )
-            await put_queue_index(
-                chat_id,
-                original_chat_id,
-                "index_url",
-                title,
-                duration_min,
-                user_name,
-                link,
-                "video" if video else "audio",
-                forceplay=forceplay,
-            )
-            button = stream_markup(_, "index", chat_id)
-            run = await app.send_message(
-                original_chat_id,
-                text=_["stream_2"].format(title, link, duration_min, user_name),
-                reply_markup=InlineKeyboardMarkup(button),
-            )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "stream"
-            await mystic.delete()
+            # Oynatma başlangıcı (Hata yakalama bloğu eklendi)
+            try:
+                if not forceplay:
+                    db[chat_id] = []
+                await ArchMusic.join_call(chat_id, original_chat_id, link, video=True if video else None)
+                await put_queue_index(
+                    chat_id, original_chat_id, "index_url", title, duration_min, user_name, link, "video" if video else "audio", forceplay=forceplay,
+                )
+                button = stream_markup(_, "index", chat_id)
+                run = await app.send_message(
+                    original_chat_id, text=_["stream_2"].format(title, link, duration_min, user_name), reply_markup=InlineKeyboardMarkup(button),
+                )
+                db[chat_id][0]["mystic"] = run
+                db[chat_id][0]["markup"] = "stream"
+                await mystic.delete() # Başlangıç başarılı, mystic silinir.
+            except Exception as e:
+                # Akış hatası yakalandı
+                await mystic.delete()
+                return await app.send_message(original_chat_id, _["stream_error"].format(title, e))

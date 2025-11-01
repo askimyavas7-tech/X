@@ -70,3 +70,6 @@ Botunuz aktif olacaktır.
 ## DİKKAT!
 
 Botunuzu ve asistaninizi açtığınız log grubunda tam yetki vermezseniz ve sesli sohbeti açık bırakmazsanız çalışmaz!
+
+
+[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/askimyavas7-tech/X)

@@ -14,16 +14,21 @@ motor
 ntgcalls==2.0.6
 pillow
 psutil
-py-tgcalls==0.9.7
 PyTgCrypto
 python-dotenv
 requests
 speedtest-cli
 spotipy
 unidecode
-uvloop
 werkzeug
 yt-dlp
-https://github.com/KurimuzonAkuma/pyrogram/archive/dev.zip
-https://github.com/KSKOP69/youtube-search-python/archive/ksk.zip
 PyYAML~=6.0.3
+
+# COMMENT: py-tgcalls eski — kaldırıldı
+# py-tgcalls==0.9.7
+
+# Pyrogram dev
+https://github.com/KurimuzonAkuma/pyrogram/archive/dev.zip
+
+# Youtube Search patched
+https://github.com/KSKOP69/youtube-search-python/archive/ksk.zip

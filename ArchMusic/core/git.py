@@ -11,12 +11,12 @@
 import asyncio
 import shlex
 from typing import Tuple
+import os
 
 from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
 import config
-
 from ..logging import LOGGER
 
 loop = asyncio.get_event_loop_policy().get_event_loop()
@@ -45,6 +45,12 @@ def install_req(cmd: str) -> Tuple[str, str, int, int]:
 
 def git():
     REPO_LINK = config.UPSTREAM_REPO
+
+    # Heroku ortamında git işlemini atla
+    if "DYNO" in os.environ:
+        LOGGER(__name__).info("Heroku ortamı tespit edildi, git işlemi atlanıyor")
+        return
+
     if config.GIT_TOKEN:
         GIT_USERNAME = REPO_LINK.split("com/")[1].split("/")[0]
         TEMP_REPO = REPO_LINK.split("https://")[1]
@@ -53,6 +59,7 @@ def git():
         )
     else:
         UPSTREAM_REPO = config.UPSTREAM_REPO
+
     try:
         repo = Repo()
         LOGGER(__name__).info(f"Git Client Found [VPS DEPLOYER]")

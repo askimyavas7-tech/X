@@ -23,8 +23,11 @@ werkzeug
 yt-dlp
 PyYAML~=6.0.3
 
-# Pyrogram (stabil)
-pyrogram==2.0.106
+# COMMENT: py-tgcalls eski — kaldırıldı
+# py-tgcalls==0.9.7
 
-# Youtube search (stabil)
-youtube-search-python==1.6.6
+# Pyrogram dev
+https://github.com/KurimuzonAkuma/pyrogram/archive/dev.zip
+
+# Youtube Search patched
+https://github.com/KSKOP69/youtube-search-python/archive/ksk.zip

@@ -1,6 +1,5 @@
 pytz
 apscheduler
-pykeyboard
 aiofiles
 aiohttp~=3.12.15
 beautifulsoup4
